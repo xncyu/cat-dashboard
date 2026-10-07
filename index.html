@@ -3,177 +3,246 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>貓咪日常打卡</title>
+    <title>貓咪日常打卡儀表板</title>
     <style>
-        body {
-            background-color: #F5E6D3;
-            font-family: 'Helvetica Neue', Arial, 'LiHei Pro', sans-serif;
-            margin: 0;
-            padding: 20px;
-            padding-bottom: 80px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            box-sizing: border-box;
-            color: #5D4037;
-        }
+        /* 共用設計 */
+        body { background-color: #F5E6D3; font-family: 'Helvetica Neue', Arial, 'LiHei Pro', sans-serif; margin: 0; padding: 20px; padding-bottom: 80px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; color: #5D4037; }
         h1 { font-size: 1.8rem; margin-bottom: 20px; text-align: center; }
+        .hidden { display: none !important; } /* 用來隱藏其他分頁的關鍵 CSS */
+        .page-content { width: 100%; max-width: 600px; display: flex; flex-direction: column; align-items: center; }
         
-        /* 上方打卡按鈕區塊 (移除陪玩放電，剩5個) */
-        .btn-container {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; max-width: 600px;
-        }
-        .action-btn {
-            background-color: #FFFFFF; border: 2px solid #E0C9B1; border-radius: 20px; padding: 20px 10px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            cursor: pointer; box-shadow: 0 6px 15px rgba(139, 115, 85, 0.15); transition: all 0.1s ease; user-select: none;
-        }
+        /* 底部導覽列 */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #FFFFFF; box-shadow: 0 -2px 10px rgba(139, 115, 85, 0.1); display: flex; justify-content: space-around; padding: 15px 0; z-index: 1000; padding-bottom: calc(15px + env(safe-area-inset-bottom)); }
+        .nav-item { background: none; border: none; color: #D7CCC8; font-weight: bold; display: flex; flex-direction: column; align-items: center; font-size: 0.9rem; width: 33%; cursor: pointer; }
+        .nav-item.active { color: #5D4037; }
+        .nav-emoji { font-size: 1.5rem; margin-bottom: 5px; }
+
+        /* ================= 首頁樣式 ================= */
+        .btn-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; }
+        .action-btn { background-color: #FFFFFF; border: 2px solid #E0C9B1; border-radius: 20px; padding: 20px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 15px rgba(139, 115, 85, 0.15); transition: all 0.1s ease; user-select: none; }
         .action-btn:active { transform: translateY(4px); box-shadow: 0 2px 5px rgba(139, 115, 85, 0.15); }
         .emoji { font-size: 2.5rem; margin-bottom: 8px; }
         .btn-text { font-size: 1.05rem; font-weight: bold; }
-        
-        /* 紀錄顯示板 */
-        .record-board {
-            margin-top: 30px; background-color: rgba(255, 255, 255, 0.6); border-radius: 15px;
-            width: 100%; max-width: 600px; flex-grow: 1; padding: 20px; box-sizing: border-box; overflow-y: auto;
-        }
-        .record-title {
-            font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; border-bottom: 2px dashed #E0C9B1;
-            padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
-        }
-        
-        /* 新增：滑動式分類標籤區塊 */
-        .filter-container {
-            display: flex; gap: 8px; overflow-x: auto; margin-bottom: 15px; padding-bottom: 5px;
-            scrollbar-width: none; /* 隱藏 Firefox 捲軸 */
-        }
-        .filter-container::-webkit-scrollbar { display: none; /* 隱藏 Chrome/Safari 捲軸 */ }
-        .filter-btn {
-            background-color: #E0C9B1; color: #5D4037; border: none; border-radius: 15px;
-            padding: 8px 12px; font-size: 0.9rem; font-weight: bold; white-space: nowrap; cursor: pointer; transition: 0.2s;
-        }
+        .record-board { margin-top: 30px; background-color: rgba(255, 255, 255, 0.6); border-radius: 15px; width: 100%; padding: 20px; box-sizing: border-box; }
+        .record-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; border-bottom: 2px dashed #E0C9B1; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .filter-container { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 15px; padding-bottom: 5px; scrollbar-width: none; }
+        .filter-container::-webkit-scrollbar { display: none; }
+        .filter-btn { background-color: #E0C9B1; color: #5D4037; border: none; border-radius: 15px; padding: 8px 12px; font-size: 0.9rem; font-weight: bold; white-space: nowrap; cursor: pointer; }
         .filter-btn.active { background-color: #5D4037; color: #FFF; }
-
         .record-item { font-size: 1.1rem; margin-bottom: 12px; }
         .time-tag { color: #8D6E63; font-size: 0.85rem; margin-right: 10px; font-weight: bold; }
         .clear-btn { background-color: #FFB09C; color: white; border: none; border-radius: 8px; padding: 5px 10px; font-weight: bold; cursor: pointer; }
-        
-        .bottom-nav {
-            position: fixed; bottom: 0; left: 0; width: 100%; background-color: #FFFFFF;
-            box-shadow: 0 -2px 10px rgba(139, 115, 85, 0.1); display: flex; justify-content: space-around;
-            padding: 15px 0; z-index: 1000; padding-bottom: calc(15px + env(safe-area-inset-bottom));
-        }
-        .nav-item {
-            text-decoration: none; color: #D7CCC8; font-weight: bold; display: flex;
-            flex-direction: column; align-items: center; font-size: 0.9rem; width: 33%;
-        }
-        .nav-item.active { color: #5D4037; }
-        .nav-emoji { font-size: 1.5rem; margin-bottom: 5px; }
+
+        /* ================= 健康備忘錄樣式 ================= */
+        .input-area { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        textarea { width: 100%; height: 80px; border-radius: 10px; border: 2px solid #E0C9B1; padding: 10px; font-size: 1rem; box-sizing: border-box; font-family: inherit; }
+        .save-btn { background-color: #A1887F; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+        .note-board { background-color: rgba(255, 255, 255, 0.8); border-radius: 15px; width: 100%; padding: 20px; box-sizing: border-box; }
+        .note-item { background-color: #FFF; padding: 15px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .note-date { color: #8D6E63; font-size: 0.85rem; margin-bottom: 5px; font-weight: bold; }
+        .delete-btn { color: #FFB09C; font-size: 0.85rem; float: right; cursor: pointer; border: none; background: none; font-weight: bold; }
+
+        /* ================= 相簿牆樣式 ================= */
+        .upload-area { width: 100%; background-color: rgba(255, 255, 255, 0.6); border-radius: 15px; padding: 15px; margin-bottom: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; }
+        .file-input { width: 100%; font-size: 0.9rem; padding: 5px 0; }
+        .caption-input { width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #E0C9B1; font-size: 1rem; box-sizing: border-box; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; }
+        .polaroid { background: white; padding: 10px 10px 15px 10px; border-radius: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); position: relative; }
+        .polaroid img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 3px; background-color: #E0C9B1; }
+        .caption { text-align: center; font-size: 0.95rem; margin-top: 10px; font-weight: bold; color: #5D4037; }
+        .gallery-time { text-align: center; font-size: 0.75rem; color: #A1887F; margin-top: 5px; }
+        .del-photo-btn { position: absolute; top: -5px; right: -5px; background-color: #FFB09C; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; font-size: 12px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
-    <h1>🐈 首頁：日常打卡</h1>
-    <div class="btn-container">
-        <div class="action-btn" onclick="addRecord('餵罐罐', '🐟')"><div class="emoji">🐟</div><div class="btn-text">餵罐罐</div></div>
-        <div class="action-btn" onclick="addRecord('清貓砂', '🚽')"><div class="emoji">🚽</div><div class="btn-text">清貓砂</div></div>
-        <div class="action-btn" onclick="addRecord('換乾淨水', '💧')"><div class="emoji">💧</div><div class="btn-text">換乾淨水</div></div>
-        <div class="action-btn" onclick="addRecord('點驅蟲藥', '🛡️')"><div class="emoji">🛡️</div><div class="btn-text">點驅蟲藥</div></div>
-        <div class="action-btn" onclick="addRecord('剪指甲', '✂️')"><div class="emoji">✂️</div><div class="btn-text">剪指甲</div></div>
-    </div>
-    
-    <div class="record-board">
-        <div class="record-title">
-            打卡紀錄
-            <button class="clear-btn" onclick="clearRecords()">清除紀錄</button>
+
+    <!-- 頁面 1：打卡首頁 -->
+    <div id="tab-home" class="page-content">
+        <h1>🐈 日常打卡</h1>
+        <div class="btn-container">
+            <div class="action-btn" onclick="addRecord('餵罐罐', '🐟')"><div class="emoji">🐟</div><div class="btn-text">餵罐罐</div></div>
+            <div class="action-btn" onclick="addRecord('清貓砂', '🚽')"><div class="emoji">🚽</div><div class="btn-text">清貓砂</div></div>
+            <div class="action-btn" onclick="addRecord('換乾淨水', '💧')"><div class="emoji">💧</div><div class="btn-text">換乾淨水</div></div>
+            <div class="action-btn" onclick="addRecord('點驅蟲藥', '🛡️')"><div class="emoji">🛡️</div><div class="btn-text">點驅蟲藥</div></div>
+            <div class="action-btn" onclick="addRecord('剪指甲', '✂️')"><div class="emoji">✂️</div><div class="btn-text">剪指甲</div></div>
         </div>
         
-        <!-- 新增：分類標籤 -->
-        <div class="filter-container">
-            <button class="filter-btn active" onclick="setFilter('全部')">全部</button>
-            <button class="filter-btn" onclick="setFilter('餵罐罐')">餵罐罐</button>
-            <button class="filter-btn" onclick="setFilter('清貓砂')">清貓砂</button>
-            <button class="filter-btn" onclick="setFilter('換乾淨水')">換乾淨水</button>
-            <button class="filter-btn" onclick="setFilter('點驅蟲藥')">點驅蟲藥</button>
-            <button class="filter-btn" onclick="setFilter('剪指甲')">剪指甲</button>
+        <div class="record-board">
+            <div class="record-title">打卡紀錄<button class="clear-btn" onclick="clearRecords()">清除紀錄</button></div>
+            <div class="filter-container">
+                <button class="filter-btn active" onclick="setFilter('全部')">全部</button>
+                <button class="filter-btn" onclick="setFilter('餵罐罐')">餵罐罐</button>
+                <button class="filter-btn" onclick="setFilter('清貓砂')">清貓砂</button>
+                <button class="filter-btn" onclick="setFilter('換乾淨水')">換乾淨水</button>
+                <button class="filter-btn" onclick="setFilter('點驅蟲藥')">點驅蟲藥</button>
+                <button class="filter-btn" onclick="setFilter('剪指甲')">剪指甲</button>
+            </div>
+            <div id="record-list"></div>
         </div>
-
-        <div id="record-list"></div>
     </div>
 
-    <!-- 底部導覽列 -->
+    <!-- 頁面 2：健康備忘錄 (預設隱藏) -->
+    <div id="tab-health" class="page-content hidden">
+        <h1>🩺 健康備忘錄</h1>
+        <div class="input-area">
+            <textarea id="noteInput" placeholder="例如：發現下巴有黑黑的粉刺，改用陶瓷碗裝水並觀察..."></textarea>
+            <button class="save-btn" onclick="saveNote()">儲存紀錄</button>
+        </div>
+        <div class="note-board" id="note-list"></div>
+    </div>
+
+    <!-- 頁面 3：相簿牆 (預設隱藏) -->
+    <div id="tab-gallery" class="page-content hidden">
+        <h1>📷 主子相簿牆</h1>
+        <div class="upload-area">
+            <input type="file" id="photoInput" class="file-input" accept="image/*">
+            <input type="text" id="captionInput" class="caption-input" placeholder="寫點備註吧 (例如：主子翻肚肚)">
+            <button class="save-btn" onclick="addPhoto()">上傳照片</button>
+        </div>
+        <div class="gallery-grid" id="gallery-grid"></div>
+    </div>
+
+    <!-- 底部導覽列 (利用 JS 切換畫面) -->
     <div class="bottom-nav">
-        <a href="index.html" class="nav-item active"><div class="nav-emoji">🏠</div>首頁</a>
-        <a href="health.html" class="nav-item"><div class="nav-emoji">🩺</div>健康備忘錄</a>
-        <a href="gallery.html" class="nav-item"><div class="nav-emoji">📷</div>相簿牆</a>
+        <button id="nav-home" class="nav-item active" onclick="switchTab('home')"><div class="nav-emoji">🏠</div>首頁</button>
+        <button id="nav-health" class="nav-item" onclick="switchTab('health')"><div class="nav-emoji">🩺</div>健康紀錄</button>
+        <button id="nav-gallery" class="nav-item" onclick="switchTab('gallery')"><div class="nav-emoji">📷</div>相簿牆</button>
     </div>
 
+    <!-- 所有功能的 JavaScript 寫在一起 -->
     <script>
-        const recordList = document.getElementById('record-list');
-        let currentFilter = '全部'; // 記錄目前選擇的分類
+        // === 1. 畫面切換邏輯 (SPA核心) ===
+        function switchTab(tabName) {
+            // 先把三個畫面都隱藏
+            document.getElementById('tab-home').classList.add('hidden');
+            document.getElementById('tab-health').classList.add('hidden');
+            document.getElementById('tab-gallery').classList.add('hidden');
+            // 把導覽列按鈕都變成灰色
+            document.getElementById('nav-home').classList.remove('active');
+            document.getElementById('nav-health').classList.remove('active');
+            document.getElementById('nav-gallery').classList.remove('active');
 
-        window.onload = function() { loadRecords(); };
-        
-        // 設定目前的分類過濾器
-        function setFilter(filterType) {
-            currentFilter = filterType;
-            
-            // 更新按鈕的視覺效果 (深色反白)
-            const buttons = document.querySelectorAll('.filter-btn');
-            buttons.forEach(btn => {
-                if (btn.innerText === filterType) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
-            });
-
-            renderRecords();
+            // 顯示被點擊的那個畫面與按鈕
+            document.getElementById('tab-' + tabName).classList.remove('hidden');
+            document.getElementById('nav-' + tabName).classList.add('active');
         }
 
+        // 網頁載入時，把所有的資料都讀取出來
+        window.onload = function() {
+            renderRecords();
+            renderNotes();
+            renderGallery();
+        };
+
+        // === 2. 首頁打卡邏輯 ===
+        let currentFilter = '全部';
+        function setFilter(filterType) {
+            currentFilter = filterType;
+            const buttons = document.querySelectorAll('.filter-btn');
+            buttons.forEach(btn => {
+                if (btn.innerText === filterType) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+            renderRecords();
+        }
         function addRecord(action, emoji) {
             const now = new Date();
-            const year = now.getFullYear();
-            const month = (now.getMonth() + 1).toString().padStart(2, '0');
-            const day = now.getDate().toString().padStart(2, '0');
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            
-            const timeString = `${year}/${month}/${day} ${hours}:${minutes}`;
+            const timeString = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
             const recordText = `<span class="time-tag">[${timeString}]</span> 完成了 <b>${action}</b> ${emoji}`;
-            
             let records = JSON.parse(localStorage.getItem('catRecords')) || [];
             records.unshift(recordText);
             localStorage.setItem('catRecords', JSON.stringify(records));
-            
-            // 新增紀錄後，自動切換回「全部」並顯示
             setFilter('全部');
         }
-        
         function renderRecords() {
             let records = JSON.parse(localStorage.getItem('catRecords')) || [];
-            
-            // 進行分類篩選
-            if (currentFilter !== '全部') {
-                // 利用關鍵字篩選符合該分類的紀錄
-                records = records.filter(record => record.includes(currentFilter));
-            }
-
+            if (currentFilter !== '全部') records = records.filter(r => r.includes(currentFilter));
+            const list = document.getElementById('record-list');
             if (records.length === 0) {
-                recordList.innerHTML = `<div style="color: #A1887F; text-align: center; margin-top: 20px;">這個分類目前還沒有紀錄喔！</div>`; 
+                list.innerHTML = `<div style="color: #A1887F; text-align: center; margin-top: 20px;">目前還沒有紀錄喔！</div>`;
                 return;
             }
-            recordList.innerHTML = records.map(record => `<div class="record-item">${record}</div>`).join('');
+            list.innerHTML = records.map(r => `<div class="record-item">${r}</div>`).join('');
         }
-        
-        function loadRecords() { renderRecords(); }
-        
         function clearRecords() {
-            // 只清除目前顯示分類的紀錄，還是全部？這邊設定為全清較符合直覺
-            if(confirm("確定要清除所有的紀錄嗎？（清除後無法復原喔）")) { 
-                localStorage.removeItem('catRecords'); 
-                setFilter('全部'); 
+            if(confirm("確定要清除所有紀錄嗎？")) { localStorage.removeItem('catRecords'); setFilter('全部'); }
+        }
+
+        // === 3. 健康備忘錄邏輯 ===
+        function saveNote() {
+            const input = document.getElementById('noteInput');
+            if(input.value.trim() === '') return;
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}`;
+            let notes = JSON.parse(localStorage.getItem('catNotes')) || [];
+            notes.unshift({ date: dateStr, text: input.value });
+            localStorage.setItem('catNotes', JSON.stringify(notes));
+            input.value = '';
+            renderNotes();
+        }
+        function deleteNote(index) {
+            let notes = JSON.parse(localStorage.getItem('catNotes')) || [];
+            notes.splice(index, 1);
+            localStorage.setItem('catNotes', JSON.stringify(notes));
+            renderNotes();
+        }
+        function renderNotes() {
+            let notes = JSON.parse(localStorage.getItem('catNotes')) || [];
+            const list = document.getElementById('note-list');
+            if(notes.length === 0) { list.innerHTML = '<div style="color: #A1887F; text-align: center;">目前沒有健康紀錄</div>'; return; }
+            list.innerHTML = notes.map((note, idx) => `
+                <div class="note-item">
+                    <div class="note-date">${note.date} <button class="delete-btn" onclick="deleteNote(${idx})">刪除</button></div>
+                    <div>${note.text}</div>
+                </div>
+            `).join('');
+        }
+
+        // === 4. 相簿牆邏輯 ===
+        function addPhoto() {
+            const photoInput = document.getElementById('photoInput');
+            const captionInput = document.getElementById('captionInput');
+            if (photoInput.files.length === 0) { alert('請先選擇照片！'); return; }
+            
+            const file = photoInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const now = new Date();
+                const timeStr = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+                let gallery = JSON.parse(localStorage.getItem('catGallery')) || [];
+                gallery.unshift({ image: e.target.result, caption: captionInput.value || '可愛主子', time: timeStr });
+                try {
+                    localStorage.setItem('catGallery', JSON.stringify(gallery));
+                } catch (error) {
+                    alert('空間已滿！請先刪除舊照片。'); return;
+                }
+                photoInput.value = ''; captionInput.value = '';
+                renderGallery();
+            };
+            reader.readAsDataURL(file);
+        }
+        function deletePhoto(index) {
+            if(confirm('確定要刪除這張照片嗎？')) {
+                let gallery = JSON.parse(localStorage.getItem('catGallery')) || [];
+                gallery.splice(index, 1);
+                localStorage.setItem('catGallery', JSON.stringify(gallery));
+                renderGallery();
             }
+        }
+        function renderGallery() {
+            let gallery = JSON.parse(localStorage.getItem('catGallery')) || [];
+            const grid = document.getElementById('gallery-grid');
+            if (gallery.length === 0) {
+                grid.innerHTML = '<div style="color: #A1887F; text-align: center; grid-column: 1 / -1; margin-top: 20px;">目前還沒有照片喔！</div>'; return;
+            }
+            grid.innerHTML = gallery.map((item, idx) => `
+                <div class="polaroid">
+                    <button class="del-photo-btn" onclick="deletePhoto(${idx})">✖</button>
+                    <img src="${item.image}" alt="貓咪照片">
+                    <div class="caption">${item.caption}</div>
+                    <div class="gallery-time">${item.time}</div>
+                </div>
+            `).join('');
         }
     </script>
 </body>
