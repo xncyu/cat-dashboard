@@ -8,7 +8,7 @@
         /* 共用設計 */
         body { background-color: #F5E6D3; font-family: 'Helvetica Neue', Arial, 'LiHei Pro', sans-serif; margin: 0; padding: 20px; padding-bottom: 80px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; color: #5D4037; }
         h1 { font-size: 1.8rem; margin-bottom: 20px; text-align: center; }
-        .hidden { display: none !important; } /* 用來隱藏其他分頁的關鍵 CSS */
+        .hidden { display: none !important; }
         .page-content { width: 100%; max-width: 600px; display: flex; flex-direction: column; align-items: center; }
         
         /* 底部導覽列 */
@@ -81,7 +81,7 @@
         </div>
     </div>
 
-    <!-- 頁面 2：健康備忘錄 (預設隱藏) -->
+    <!-- 頁面 2：健康備忘錄 -->
     <div id="tab-health" class="page-content hidden">
         <h1>🩺 健康備忘錄</h1>
         <div class="input-area">
@@ -91,7 +91,7 @@
         <div class="note-board" id="note-list"></div>
     </div>
 
-    <!-- 頁面 3：相簿牆 (預設隱藏) -->
+    <!-- 頁面 3：相簿牆 -->
     <div id="tab-gallery" class="page-content hidden">
         <h1>📷 主子相簿牆</h1>
         <div class="upload-area">
@@ -102,32 +102,26 @@
         <div class="gallery-grid" id="gallery-grid"></div>
     </div>
 
-    <!-- 底部導覽列 (利用 JS 切換畫面) -->
+    <!-- 底部導覽列 -->
     <div class="bottom-nav">
         <button id="nav-home" class="nav-item active" onclick="switchTab('home')"><div class="nav-emoji">🏠</div>首頁</button>
         <button id="nav-health" class="nav-item" onclick="switchTab('health')"><div class="nav-emoji">🩺</div>健康紀錄</button>
         <button id="nav-gallery" class="nav-item" onclick="switchTab('gallery')"><div class="nav-emoji">📷</div>相簿牆</button>
     </div>
 
-    <!-- 所有功能的 JavaScript 寫在一起 -->
     <script>
-        // === 1. 畫面切換邏輯 (SPA核心) ===
+        // === 1. 畫面切換邏輯 ===
         function switchTab(tabName) {
-            // 先把三個畫面都隱藏
             document.getElementById('tab-home').classList.add('hidden');
             document.getElementById('tab-health').classList.add('hidden');
             document.getElementById('tab-gallery').classList.add('hidden');
-            // 把導覽列按鈕都變成灰色
             document.getElementById('nav-home').classList.remove('active');
             document.getElementById('nav-health').classList.remove('active');
             document.getElementById('nav-gallery').classList.remove('active');
-
-            // 顯示被點擊的那個畫面與按鈕
             document.getElementById('tab-' + tabName).classList.remove('hidden');
             document.getElementById('nav-' + tabName).classList.add('active');
         }
 
-        // 網頁載入時，把所有的資料都讀取出來
         window.onload = function() {
             renderRecords();
             renderNotes();
@@ -198,7 +192,7 @@
             `).join('');
         }
 
-        // === 4. 相簿牆邏輯 ===
+        // === 4. 相簿牆邏輯 (加入 Canvas 影像壓縮技術) ===
         function addPhoto() {
             const photoInput = document.getElementById('photoInput');
             const captionInput = document.getElementById('captionInput');
@@ -206,21 +200,57 @@
             
             const file = photoInput.files[0];
             const reader = new FileReader();
+            
             reader.onload = function(e) {
-                const now = new Date();
-                const timeStr = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-                let gallery = JSON.parse(localStorage.getItem('catGallery')) || [];
-                gallery.unshift({ image: e.target.result, caption: captionInput.value || '可愛主子', time: timeStr });
-                try {
-                    localStorage.setItem('catGallery', JSON.stringify(gallery));
-                } catch (error) {
-                    alert('空間已滿！請先刪除舊照片。'); return;
-                }
-                photoInput.value = ''; captionInput.value = '';
-                renderGallery();
+                // 建立一個隱形的圖片來讀取檔案
+                const img = new Image();
+                img.onload = function() {
+                    // 設定最大寬度與高度，進行等比例縮小
+                    const MAX_WIDTH = 600;
+                    const MAX_HEIGHT = 600;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    } else {
+                        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                    }
+
+                    // 使用 Canvas 繪製縮小後的圖片
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // 將縮小後的圖片轉回 Base64 (0.7 代表 70% 的 JPG 畫質，能大幅減少容量)
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+
+                    const now = new Date();
+                    const timeStr = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+                    
+                    let gallery = JSON.parse(localStorage.getItem('catGallery')) || [];
+                    
+                    // 儲存壓縮後的照片
+                    gallery.unshift({ image: compressedBase64, caption: captionInput.value || '可愛主子', time: timeStr });
+                    
+                    try {
+                        localStorage.setItem('catGallery', JSON.stringify(gallery));
+                    } catch (error) {
+                        alert('空間已滿！請先刪除舊照片。'); return;
+                    }
+                    
+                    photoInput.value = ''; captionInput.value = '';
+                    renderGallery();
+                };
+                // 把讀取到的原始大照片丟給 img 去處理
+                img.src = e.target.result;
             };
+            // 讀取使用者選擇的檔案
             reader.readAsDataURL(file);
         }
+
         function deletePhoto(index) {
             if(confirm('確定要刪除這張照片嗎？')) {
                 let gallery = JSON.parse(localStorage.getItem('catGallery')) || [];
@@ -229,6 +259,7 @@
                 renderGallery();
             }
         }
+
         function renderGallery() {
             let gallery = JSON.parse(localStorage.getItem('catGallery')) || [];
             const grid = document.getElementById('gallery-grid');
