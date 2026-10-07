@@ -10,7 +10,7 @@
             font-family: 'Helvetica Neue', Arial, 'LiHei Pro', sans-serif;
             margin: 0;
             padding: 20px;
-            padding-bottom: 80px; /* 留空間給底部選單 */
+            padding-bottom: 80px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -19,6 +19,8 @@
             color: #5D4037;
         }
         h1 { font-size: 1.8rem; margin-bottom: 20px; text-align: center; }
+        
+        /* 上方打卡按鈕區塊 (移除陪玩放電，剩5個) */
         .btn-container {
             display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; max-width: 600px;
         }
@@ -30,19 +32,33 @@
         .action-btn:active { transform: translateY(4px); box-shadow: 0 2px 5px rgba(139, 115, 85, 0.15); }
         .emoji { font-size: 2.5rem; margin-bottom: 8px; }
         .btn-text { font-size: 1.05rem; font-weight: bold; }
+        
+        /* 紀錄顯示板 */
         .record-board {
             margin-top: 30px; background-color: rgba(255, 255, 255, 0.6); border-radius: 15px;
             width: 100%; max-width: 600px; flex-grow: 1; padding: 20px; box-sizing: border-box; overflow-y: auto;
         }
         .record-title {
-            font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; border-bottom: 2px dashed #E0C9B1;
+            font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; border-bottom: 2px dashed #E0C9B1;
             padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
         }
-        .record-item { font-size: 1.1rem; margin-bottom: 12px; }
-        .time-tag { color: #A1887F; font-size: 0.9rem; margin-right: 10px; }
-        .clear-btn { background-color: #FFB09C; color: white; border: none; border-radius: 8px; padding: 5px 10px; font-weight: bold; }
         
-        /* 底部導覽列 CSS */
+        /* 新增：滑動式分類標籤區塊 */
+        .filter-container {
+            display: flex; gap: 8px; overflow-x: auto; margin-bottom: 15px; padding-bottom: 5px;
+            scrollbar-width: none; /* 隱藏 Firefox 捲軸 */
+        }
+        .filter-container::-webkit-scrollbar { display: none; /* 隱藏 Chrome/Safari 捲軸 */ }
+        .filter-btn {
+            background-color: #E0C9B1; color: #5D4037; border: none; border-radius: 15px;
+            padding: 8px 12px; font-size: 0.9rem; font-weight: bold; white-space: nowrap; cursor: pointer; transition: 0.2s;
+        }
+        .filter-btn.active { background-color: #5D4037; color: #FFF; }
+
+        .record-item { font-size: 1.1rem; margin-bottom: 12px; }
+        .time-tag { color: #8D6E63; font-size: 0.85rem; margin-right: 10px; font-weight: bold; }
+        .clear-btn { background-color: #FFB09C; color: white; border: none; border-radius: 8px; padding: 5px 10px; font-weight: bold; cursor: pointer; }
+        
         .bottom-nav {
             position: fixed; bottom: 0; left: 0; width: 100%; background-color: #FFFFFF;
             box-shadow: 0 -2px 10px rgba(139, 115, 85, 0.1); display: flex; justify-content: space-around;
@@ -62,12 +78,26 @@
         <div class="action-btn" onclick="addRecord('餵罐罐', '🐟')"><div class="emoji">🐟</div><div class="btn-text">餵罐罐</div></div>
         <div class="action-btn" onclick="addRecord('清貓砂', '🚽')"><div class="emoji">🚽</div><div class="btn-text">清貓砂</div></div>
         <div class="action-btn" onclick="addRecord('換乾淨水', '💧')"><div class="emoji">💧</div><div class="btn-text">換乾淨水</div></div>
-        <div class="action-btn" onclick="addRecord('陪玩放電', '🧶')"><div class="emoji">🧶</div><div class="btn-text">陪玩放電</div></div>
         <div class="action-btn" onclick="addRecord('點驅蟲藥', '🛡️')"><div class="emoji">🛡️</div><div class="btn-text">點驅蟲藥</div></div>
         <div class="action-btn" onclick="addRecord('剪指甲', '✂️')"><div class="emoji">✂️</div><div class="btn-text">剪指甲</div></div>
     </div>
+    
     <div class="record-board">
-        <div class="record-title">今日打卡紀錄<button class="clear-btn" onclick="clearRecords()">清除重置</button></div>
+        <div class="record-title">
+            打卡紀錄
+            <button class="clear-btn" onclick="clearRecords()">清除紀錄</button>
+        </div>
+        
+        <!-- 新增：分類標籤 -->
+        <div class="filter-container">
+            <button class="filter-btn active" onclick="setFilter('全部')">全部</button>
+            <button class="filter-btn" onclick="setFilter('餵罐罐')">餵罐罐</button>
+            <button class="filter-btn" onclick="setFilter('清貓砂')">清貓砂</button>
+            <button class="filter-btn" onclick="setFilter('換乾淨水')">換乾淨水</button>
+            <button class="filter-btn" onclick="setFilter('點驅蟲藥')">點驅蟲藥</button>
+            <button class="filter-btn" onclick="setFilter('剪指甲')">剪指甲</button>
+        </div>
+
         <div id="record-list"></div>
     </div>
 
@@ -80,28 +110,71 @@
 
     <script>
         const recordList = document.getElementById('record-list');
+        let currentFilter = '全部'; // 記錄目前選擇的分類
+
         window.onload = function() { loadRecords(); };
+        
+        // 設定目前的分類過濾器
+        function setFilter(filterType) {
+            currentFilter = filterType;
+            
+            // 更新按鈕的視覺效果 (深色反白)
+            const buttons = document.querySelectorAll('.filter-btn');
+            buttons.forEach(btn => {
+                if (btn.innerText === filterType) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            renderRecords();
+        }
+
         function addRecord(action, emoji) {
             const now = new Date();
-            const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            
+            const timeString = `${year}/${month}/${day} ${hours}:${minutes}`;
             const recordText = `<span class="time-tag">[${timeString}]</span> 完成了 <b>${action}</b> ${emoji}`;
+            
             let records = JSON.parse(localStorage.getItem('catRecords')) || [];
             records.unshift(recordText);
             localStorage.setItem('catRecords', JSON.stringify(records));
-            renderRecords();
+            
+            // 新增紀錄後，自動切換回「全部」並顯示
+            setFilter('全部');
         }
+        
         function renderRecords() {
             let records = JSON.parse(localStorage.getItem('catRecords')) || [];
+            
+            // 進行分類篩選
+            if (currentFilter !== '全部') {
+                // 利用關鍵字篩選符合該分類的紀錄
+                records = records.filter(record => record.includes(currentFilter));
+            }
+
             if (records.length === 0) {
-                recordList.innerHTML = '<div style="color: #A1887F; text-align: center; margin-top: 20px;">今天還沒有打卡喔！</div>'; return;
+                recordList.innerHTML = `<div style="color: #A1887F; text-align: center; margin-top: 20px;">這個分類目前還沒有紀錄喔！</div>`; 
+                return;
             }
             recordList.innerHTML = records.map(record => `<div class="record-item">${record}</div>`).join('');
         }
+        
         function loadRecords() { renderRecords(); }
+        
         function clearRecords() {
-            if(confirm("確定要清除今天的紀錄嗎？")) { localStorage.removeItem('catRecords'); renderRecords(); }
+            // 只清除目前顯示分類的紀錄，還是全部？這邊設定為全清較符合直覺
+            if(confirm("確定要清除所有的紀錄嗎？（清除後無法復原喔）")) { 
+                localStorage.removeItem('catRecords'); 
+                setFilter('全部'); 
+            }
         }
     </script>
 </body>
 </html>
-
